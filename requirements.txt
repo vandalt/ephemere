@@ -1,1 +1,3 @@
 git+https://github.com/AntoineDarveau/exofile.git#egg=exofile
+radvel
+h5py
