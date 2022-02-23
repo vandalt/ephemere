@@ -1,5 +1,5 @@
 import numpy as np
-from pandas import Series
+from pandas import Series, DataFrame
 from radvel.kepler import rv_drive
 from radvel.orbit import timetrans_to_timeperi
 from scipy.stats import norm, truncnorm
@@ -64,6 +64,8 @@ def draw_param(planet: Series, key: str, ndraws: int) -> np.ndarray:
     :rtype: np.ndarray
     """
 
+    # NOTE: Maybe astropy uncertainties could do the job, but would need truncated normal
+    # (related issue: https://github.com/astropy/astropy/issues/12886)
     pval = planet[key]
     err = get_param_error(planet, key)
 
@@ -86,7 +88,7 @@ def get_param_error(planet: Series, pkey: str):
 
 
 
-def get_orbit_params(planet: Series, n_samples: int = 0):
+def get_orbit_params(planet: Series, n_samples: int = 0)  -> Series:
 
     orbpars = planet.copy()
 
@@ -124,3 +126,55 @@ def get_orbit_params(planet: Series, n_samples: int = 0):
         pass
 
     return orbpars
+
+
+def rv_model_from_samples(rv_samples: np.ndarray) -> np.ndarray:
+
+    # Get curve and 1-sigma enveloppe from rv draws
+    rv_16th, rv_med, rv_84th = np.percentile(
+        rv_samples, [16, 50, 84], axis=0
+    )
+    rv_err_lo = rv_med - rv_16th
+    rv_err_hi = rv_84th - rv_med
+    rv_err = np.mean([rv_err_hi, rv_err_lo], axis=0)
+
+    return np.array([rv_med, rv_err]).T
+
+
+def get_rv_signal(t: np.ndarray, params: Series, return_samples: bool = False) -> np.ndarray:
+
+    t = np.atleast_1d(t)
+
+    scalar_mask = params.apply(np.isscalar)
+
+    if scalar_mask.any() and not scalar_mask.all():
+        raise TypeError(
+            "params must contain only scalars or only arrays, not a mix of both"
+        )
+
+    is_scalar = scalar_mask.all()
+
+    # If not scalar, dataframe will be more convenient
+    if not is_scalar:
+        params = DataFrame(params.to_dict())
+
+    # Make sure parameters are properly ordered for radvel
+    # Keep after dict conversion because dicts are unordered
+    params = params[ORB_KEYS]
+
+    if is_scalar:
+        orbel = params.to_list()
+        rv = rv_drive(t, orbel)
+
+        return rv
+
+    # Store RVs for each parameter sample in n_samples x len(t) array
+    rv_samples = np.empty((len(params), len(t)))
+    for i, pseries in params.iterrows():
+        orbel = pseries.to_list()
+        rv_samples[i] = rv_drive(t, orbel)
+
+    if return_samples:
+        return rv_samples
+    else:
+        rv_model_from_samples(rv_samples)
