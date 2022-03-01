@@ -1,51 +1,40 @@
 import numpy as np
 from pandas import Series, DataFrame
+# TODO: Silence celerite warnign on radvel import
 from radvel.kepler import rv_drive
 from radvel.orbit import timetrans_to_timeperi
 from scipy.stats import norm, truncnorm
 
-# Keys from the archive
-PER_KEY = "pl_orbper"
-TP_KEY = "pl_orbtper"
-TC_KEY = "pl_tranmid"
-ECC_KEY = "pl_orbeccen"
-OMEGA_KEY = "pl_orblper"
-K_KEY = "pl_rvamp"
-TRANSIT_FLAG = "tran_flag"
-
-# Keys used to model orbit
-ORB_KEYS = [PER_KEY, TP_KEY, ECC_KEY, OMEGA_KEY, K_KEY]
-ORB_KEYS_REFS = [ok + "_reflink" for ok in ORB_KEYS]
-
+from ephemere import constants as const
 
 def get_tp_param(planet: Series, n_samples: int = 0):
     # Get tp from tp or tc (transit)
 
     # If both are NaN, we can't obtain tp
-    has_tp = not np.isnan(planet[TP_KEY])
-    has_tc = not np.isnan(planet[TC_KEY])
+    has_tp = not np.isnan(planet[const.TP_KEY])
+    has_tc = not np.isnan(planet[const.TC_KEY])
 
     if not (has_tp or has_tc):
         raise ValueError(
-            f"Both {TP_KEY} and {TC_KEY} are NaN f for {planet['pl_name']}"
+            f"Both {const.TP_KEY} and {const.TC_KEY} are NaN f for {planet['pl_name']}"
         )
 
-    if (planet[TRANSIT_FLAG] and has_tc) or not has_tp:
+    if (planet[const.TRANSIT_FLAG] and has_tc) or not has_tp:
         # For transiting planets, Tc is usually better constained -> try first
         if n_samples > 0:
-            tc = draw_param(planet, TC_KEY, n_samples)
+            tc = draw_param(planet, const.TC_KEY, n_samples)
         else:
-            tc = planet[TC_KEY]
+            tc = planet[const.TC_KEY]
         # This assumes that planet[OTHER_PARAMS] are already distributions if they
         # need to be
         tp = timetrans_to_timeperi(
-            tc, planet[PER_KEY], planet[ECC_KEY], planet[OMEGA_KEY]
+            tc, planet[const.PER_KEY], planet[const.ECC_KEY], planet[const.OMEGA_KEY]
         )
     else:
         if n_samples > 0:
-            tp = draw_param(planet, TP_KEY, n_samples)
+            tp = draw_param(planet, const.TP_KEY, n_samples)
         else:
-            tp = planet[TP_KEY]
+            tp = planet[const.TP_KEY]
 
     return tp
 
@@ -66,15 +55,16 @@ def draw_param(planet: Series, key: str, ndraws: int) -> np.ndarray:
 
     # NOTE: Maybe astropy uncertainties could do the job, but would need truncated normal
     # (related issue: https://github.com/astropy/astropy/issues/12886)
+    # Bottom line: can implement custom distribution, but what we have does the job for now
     pval = planet[key]
     err = get_param_error(planet, key)
 
     if np.any(np.isnan([pval, err])):
         raise ValueError(f"Value and error for {key} must not be NaN")
 
-    if key in [ECC_KEY, PER_KEY, K_KEY]:
+    if key in [const.ECC_KEY, const.PER_KEY, const.K_KEY]:
         # Truncated normal if unphysical below 0
-        upper = (1.0 - pval) / err if key == ECC_KEY else np.inf
+        upper = (1.0 - pval) / err if key == const.ECC_KEY else np.inf
         a, b = (0 - pval) / err, upper
         dist = truncnorm(a, b, loc=pval, scale=err)
     else:
@@ -93,8 +83,8 @@ def get_orbit_params(planet: Series, n_samples: int = 0)  -> Series:
     orbpars = planet.copy()
 
     # Check that parameters are not missing
-    special_cases = [TP_KEY]  # Parameters that we do not check directly
-    regular_params = [p for p in ORB_KEYS if p not in special_cases]
+    special_cases = [const.TP_KEY]  # Parameters that we do not check directly
+    regular_params = [p for p in const.ORB_KEYS if p not in special_cases]
     for pkey in regular_params:
         if np.isnan(orbpars[pkey]):
             raise ValueError(f"Parameter {pkey} for {orbpars['pl_name']} is NaN")
@@ -107,10 +97,10 @@ def get_orbit_params(planet: Series, n_samples: int = 0)  -> Series:
 
     # TP might come from transit time, so handle separately
     # We use orpars, so uncertainties from draw_param are propagated
-    orbpars[TP_KEY] = get_tp_param(orbpars)
+    orbpars[const.TP_KEY] = get_tp_param(orbpars, n_samples=n_samples)
 
     # Keep only keys that we use to calculate orbit
-    orbpars = orbpars[ORB_KEYS]
+    orbpars = orbpars[const.ORB_KEYS]
 
     # If some parameters have scalars and others have array,
     # Repeat scalars to arrays of same length
@@ -160,7 +150,7 @@ def get_rv_signal(t: np.ndarray, params: Series, return_samples: bool = False) -
 
     # Make sure parameters are properly ordered for radvel
     # Keep after dict conversion because dicts are unordered
-    params = params[ORB_KEYS]
+    params = params[const.ORB_KEYS]
 
     if is_scalar:
         orbel = params.to_list()

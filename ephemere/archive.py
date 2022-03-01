@@ -4,7 +4,7 @@ from pandas.core.frame import DataFrame
 
 from exofile.archive import ExoFile
 
-CONTROV_FLAG = "pl_controv_flag"
+from ephemere import constants as const
 
 def load_archive(
         query: bool = True,
@@ -13,10 +13,12 @@ def load_archive(
         keep_controv: bool = False,
         warn_units=False,
         warn_local_file=False,
+        return_pandas=True,
         **kwargs
     ) -> DataFrame:
 
     # TODO: Either merge the warn_units in exofile or use warning filters here instead
+    # Masterfile PR: https://github.com/AntoineDarveau/exofile/pull/26
     tbl = ExoFile.load(
         query=query,
         param=exofile_param_file,
@@ -27,9 +29,15 @@ def load_archive(
     )
 
     if not keep_controv:
-        tbl = tbl[tbl[CONTROV_FLAG] == 0]
+        tbl = tbl[tbl[const.CONTROV_FLAG] == 0]
 
-    return tbl.to_pandas()
+    # All our RV calculations expect omega in radians, so convert now
+    if tbl[const.OMEGA_KEY].unit != "rad":
+        tbl[const.OMEGA_KEY] = tbl[const.OMEGA_KEY].to("rad")
+        tbl[const.OMEGA_KEY + "err1"] = tbl[const.OMEGA_KEY + "err1"].to("rad")
+        tbl[const.OMEGA_KEY + "err2"] = tbl[const.OMEGA_KEY + "err2"].to("rad")
+
+    return tbl.to_pandas() if return_pandas else tbl
 
 
 def get_archive_names(names: List[str]):
