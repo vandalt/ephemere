@@ -11,9 +11,10 @@ def load_archive(
         exofile_param_file: Optional[Union[str, Path]] = None,
         use_alt_exofile: bool = False,
         keep_controv: bool = False,
-        warn_units=False,
-        warn_local_file=False,
-        return_pandas=True,
+        warn_units: bool = False,
+        warn_local_file: bool = False,
+        convert_omega: bool = True,
+        return_pandas: bool = True,
         **kwargs
     ) -> DataFrame:
 
