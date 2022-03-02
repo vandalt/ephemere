@@ -1,19 +1,32 @@
+from typing import Union
+
 import numpy as np
 from pandas import Series, DataFrame
-# TODO: Silence celerite warnign on radvel import
 from radvel.kepler import rv_drive
 from radvel.orbit import timetrans_to_timeperi
 from scipy.stats import norm, truncnorm
 
 from ephemere import constants as const
 
-def get_tp_param(planet: Series, n_samples: int = 0):
-    # Get tp from tp or tc (transit)
 
-    # If both are NaN, we can't obtain tp
+def get_tp_param(planet: Series, n_samples: int = 0) -> Union[np.ndarray, float]:
+    """
+    Get time of periastron from time of transit or time of periastron of a given planet
+    (with parameters stored in a series representing a row of the archive dataframe)
+
+    :param planet: Series with planet info (row from archive dataframe)
+    :type planet: Series
+    :param n_samples: Number of samples to draw, defaults to 0
+    :type n_samples: int, optional
+    :return: Single tp value or n_samples sample values
+    :rtype: Union[np.ndarray, float]
+    :raises ValueError: If neither tp or tc parameters are available
+    """
+
     has_tp = not np.isnan(planet[const.TP_KEY])
     has_tc = not np.isnan(planet[const.TC_KEY])
 
+    # If both are NaN, we can't obtain tp
     if not (has_tp or has_tc):
         raise ValueError(
             f"Both {const.TP_KEY} and {const.TC_KEY} are NaN f for {planet['pl_name']}"
@@ -25,8 +38,7 @@ def get_tp_param(planet: Series, n_samples: int = 0):
             tc = draw_param(planet, const.TC_KEY, n_samples)
         else:
             tc = planet[const.TC_KEY]
-        # This assumes that planet[OTHER_PARAMS] are already distributions if they
-        # need to be
+        # This assumes that other params are already distributions if they need to be
         tp = timetrans_to_timeperi(
             tc, planet[const.PER_KEY], planet[const.ECC_KEY], planet[const.OMEGA_KEY]
         )
@@ -73,12 +85,32 @@ def draw_param(planet: Series, key: str, ndraws: int) -> np.ndarray:
     return dist.rvs(ndraws)
 
 
-def get_param_error(planet: Series, pkey: str):
+def get_param_error(planet: Series, pkey: str) -> float:
+    """
+    Get average uncertainty for a single parameter based on
+
+    :param planet: Series with planet parameter info
+    :type planet: Series
+    :param pkey: Key of the parameter for which we want the error
+    :type pkey: str
+    :return: Mean uncertainty based on upper and lower uncertainty
+    :rtype: float
+    """
     return np.mean(np.abs([planet[pkey + f"err{i}"] for i in (1, 2)]))
 
 
-
 def get_orbit_params(planet: Series, n_samples: int = 0)  -> Series:
+    """
+    Get parameters that are required to compute RV curve from archive row
+
+    :param planet: Archive row with planet info stored in a pandas series
+    :type planet: Series
+    :param n_samples: Number of samples to draw (use best value if 0), defaults to 0
+    :type n_samples: int, optional
+    :return: Pandas series with planet orbit parameter, either with single values or with an array for each
+    :rtype: Series
+    :raises ValueError: Raises error if parameter value or error in NaN
+    """
 
     orbpars = planet.copy()
 
@@ -119,6 +151,14 @@ def get_orbit_params(planet: Series, n_samples: int = 0)  -> Series:
 
 
 def rv_model_from_samples(rv_samples: np.ndarray) -> np.ndarray:
+    """
+    Get RV median model and 1-sigma envelope from many sample RV curves
+
+    :param rv_samples: Input RV samples with shape (n_pts, n_samples)
+    :type rv_samples: np.ndarray
+    :return: RV Model and error (shape: (npts, 2)), first column is model, second is RV
+    :rtype: np.ndarray
+    """
 
     # Get curve and 1-sigma enveloppe from rv draws
     rv_16th, rv_med, rv_84th = np.percentile(
@@ -132,6 +172,20 @@ def rv_model_from_samples(rv_samples: np.ndarray) -> np.ndarray:
 
 
 def get_rv_signal(t: np.ndarray, params: Series, return_samples: bool = False) -> np.ndarray:
+    """
+    Get RV signal from orbit parameters of a planet
+
+    :param t: Time points where we calculate the model
+    :type t: np.ndarray
+    :param params: Orbit parameters, either as floats or arrays
+    :type params: Series
+    :param return_samples: Return all samples when using arrays of parameters, defaults to False
+    :type return_samples: bool, optional
+    :return: Single RV curve  (if parameters are scalar), all RV samples (if return_samples=True)
+             or RV curve with model (if return_samples=False and one array per parameter)
+    :rtype: np.ndarray
+    :raises TypeError: Raises TypeError if param has a mix of scalar and array elements
+    """
 
     t = np.atleast_1d(t)
 
@@ -167,4 +221,4 @@ def get_rv_signal(t: np.ndarray, params: Series, return_samples: bool = False) -
     if return_samples:
         return rv_samples
     else:
-        rv_model_from_samples(rv_samples)
+        return rv_model_from_samples(rv_samples)
