@@ -33,7 +33,7 @@ def load_archive(
         tbl = tbl[tbl[const.CONTROV_FLAG] == 0]
 
     # All our RV calculations expect omega in radians, so convert now
-    if tbl[const.OMEGA_KEY].unit != "rad":
+    if convert_omega and tbl[const.OMEGA_KEY].unit != "rad":
         tbl[const.OMEGA_KEY] = tbl[const.OMEGA_KEY].to("rad")
         tbl[const.OMEGA_KEY + "err1"] = tbl[const.OMEGA_KEY + "err1"].to("rad")
         tbl[const.OMEGA_KEY + "err2"] = tbl[const.OMEGA_KEY + "err2"].to("rad")
