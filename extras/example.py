@@ -1,20 +1,17 @@
 # %%
-from pathlib import Path
 from importlib import reload
+from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 from astropy.table import Table
-import matplotlib.pyplot as plt
 
 # Import like this to be ablet to use reload
-from ephemere import rmplanets as rmp
 from ephemere import archive as earch
-
+from ephemere import rmplanets as rmp
 
 # %%
-lbl_demo_dir = Path(
-    "/home/vandal/Documents/spirou/data/lbl_demo/"
-)
+lbl_demo_dir = Path("/home/vandal/Documents/spirou/data/lbl_demo/")
 
 OBJ_KEY = "OBJECT"
 
@@ -23,13 +20,13 @@ files = list(lbl_demo_dir.glob("lbl_Gl*_drift.rdb"))
 files += list(lbl_demo_dir.glob("lbl_GL*_drift.rdb"))
 files += list(lbl_demo_dir.glob("lbl_GJ*_drift.rdb"))
 skip_objs = [
-    "GJ 15 A", # One planet is controversial, other is long period and poorly constrained
-    "GJ 876", # Multi-planets, large amplitude, and I'm too tired to make sure consistent parameters with uncertainties
-    "GJ 3470", # Period has big uncertainty so signal is poolry constrained
-    "GJ 849", # Period has big uncertainty so signal is poolry constrained
-    "GJ 317", # Big uncertainty on w
-    "GJ 338", # Big uncertainty on orbit
-    "GJ 480", # Big uncertainty on orbit
+    "GJ 15 A",  # One planet is controversial, other is long period and poorly constrained
+    "GJ 876",  # Multi-planets, large amplitude
+    "GJ 3470",  # Period has big uncertainty so signal is poolry constrained
+    "GJ 849",  # Period has big uncertainty so signal is poolry constrained
+    "GJ 317",  # Big uncertainty on w
+    "GJ 338",  # Big uncertainty on orbit
+    "GJ 480",  # Big uncertainty on orbit
 ]
 
 
@@ -67,20 +64,17 @@ for (hostname, pl_letter), row in xfile.iterrows():
 
     # hostname + pl_letter instead of pl_name in case name does not use same host alias
     pl_key = " ".join([hostname, pl_letter])
-    orbit_params_scal[pl_key] = rmp.get_orbit_params(
-        row, n_samples=0
-    )
+    orbit_params_scal[pl_key] = rmp.get_orbit_params(row, n_samples=0)
 
     # hostname + pl_letter instead of pl_name in case name does not use same host alias
-    orbit_params_arr[pl_key] = rmp.get_orbit_params(
-        row, n_samples=10_000
-    )
+    orbit_params_arr[pl_key] = rmp.get_orbit_params(row, n_samples=10_000)
 
     tbl = data_dict[hostname]
 
     t = np.linspace(
         orbit_params_scal[pl_key]["pl_orbtper"],
-        orbit_params_scal[pl_key]["pl_orbtper"] + 5 * orbit_params_scal[pl_key]["pl_orbper"],
+        orbit_params_scal[pl_key]["pl_orbtper"]
+        + 5 * orbit_params_scal[pl_key]["pl_orbper"],
         num=1000,
     )
     times[pl_key] = t
@@ -94,12 +88,20 @@ for (hostname, pl_letter), row in xfile.iterrows():
     print(f"Gettting {pl_key} RVs")
     rv_scal[pl_key] = rmp.get_rv_signal(t, orbit_params_scal[pl_key])
     # orbit_params_arr[pl_key]["pl_orbtper"] = np.full_like(
-    #         orbit_params_arr[pl_key]["pl_orbtper"], orbit_params_scal[pl_key]["pl_orbtper"]
-    #     )
-    rv_samples[pl_key] = rmp.get_rv_signal(t, orbit_params_arr[pl_key], return_samples=True)
+    #     orbit_params_arr[pl_key]["pl_orbtper"], orbit_params_scal[pl_key]["pl_orbtper"]
+    # )
+    rv_samples[pl_key] = rmp.get_rv_signal(
+        t, orbit_params_arr[pl_key], return_samples=True
+    )
     rv_arr[pl_key] = rmp.rv_model_from_samples(rv_samples[pl_key])
 
-    # plt.errorbar(tbl["BJD"], tbl["vrad"] - np.median(tbl["vrad"]), yerr=tbl["svrad"], fmt="ko", capsize=2)
+    # plt.errorbar(
+    #     tbl["BJD"],
+    #     tbl["vrad"] - np.median(tbl["vrad"]),
+    #     yerr=tbl["svrad"],
+    #     fmt="ko",
+    #     capsize=2,
+    # )
     plt.plot(times[pl_key], rv_scal[pl_key], "bo")
     plt.plot(times[pl_key], rv_samples[pl_key][::10].T, alpha=0.01, color="r")
     plt.plot(times[pl_key], rv_arr[pl_key][:, 0], color="C0")

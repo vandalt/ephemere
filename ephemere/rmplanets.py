@@ -1,7 +1,7 @@
 from typing import Union
 
 import numpy as np
-from pandas import Series, DataFrame
+from pandas import DataFrame, Series
 from radvel.kepler import rv_drive
 from radvel.orbit import timetrans_to_timeperi
 from scipy.stats import norm, truncnorm
@@ -99,7 +99,7 @@ def get_param_error(planet: Series, pkey: str) -> float:
     return np.mean(np.abs([planet[pkey + f"err{i}"] for i in (1, 2)]))
 
 
-def get_orbit_params(planet: Series, n_samples: int = 0)  -> Series:
+def get_orbit_params(planet: Series, n_samples: int = 0) -> Series:
     """
     Get parameters that are required to compute RV curve from archive row
 
@@ -140,9 +140,7 @@ def get_orbit_params(planet: Series, n_samples: int = 0)  -> Series:
         lvals = orbpars.str.len()
         plen = int(lvals.max())  # All non-zero should be max
         scalar_mask = lvals.isna()
-        orbpars[scalar_mask] = orbpars[scalar_mask].apply(
-            lambda x: np.full(plen, x)
-        )
+        orbpars[scalar_mask] = orbpars[scalar_mask].apply(lambda x: np.full(plen, x))
     except AttributeError:
         # if all scalars, nothing to do (just filter to dict)
         pass
@@ -161,9 +159,7 @@ def rv_model_from_samples(rv_samples: np.ndarray) -> np.ndarray:
     """
 
     # Get curve and 1-sigma enveloppe from rv draws
-    rv_16th, rv_med, rv_84th = np.percentile(
-        rv_samples, [16, 50, 84], axis=0
-    )
+    rv_16th, rv_med, rv_84th = np.percentile(rv_samples, [16, 50, 84], axis=0)
     rv_err_lo = rv_med - rv_16th
     rv_err_hi = rv_84th - rv_med
     rv_err = np.mean([rv_err_hi, rv_err_lo], axis=0)
@@ -171,7 +167,9 @@ def rv_model_from_samples(rv_samples: np.ndarray) -> np.ndarray:
     return np.array([rv_med, rv_err]).T
 
 
-def get_rv_signal(t: np.ndarray, params: Series, return_samples: bool = False) -> np.ndarray:
+def get_rv_signal(
+    t: np.ndarray, params: Series, return_samples: bool = False
+) -> np.ndarray:
     """
     Get RV signal from orbit parameters of a planet
 

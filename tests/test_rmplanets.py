@@ -1,33 +1,35 @@
-import pytest
 import numpy as np
 import pandas as pd
+import pytest
 from radvel.orbit import timetrans_to_timeperi
 
 import ephemere.constants as const
 import ephemere.rmplanets as rmp
 
+
 @pytest.fixture()
 def myplanet() -> pd.Series:
-    myplanet = pd.Series({
-        const.NAME_KEY: "coolstar b",
-        const.TP_KEY: 1.0,
-        const.TC_KEY: 2.0,
-        const.PER_KEY: 5.0,
-        const.ECC_KEY: 0.0,
-        const.OMEGA_KEY: 0.0,
-        const.K_KEY: 4.0,
-        const.TRANSIT_FLAG: 0,
-    })
+    myplanet = pd.Series(
+        {
+            const.NAME_KEY: "coolstar b",
+            const.TP_KEY: 1.0,
+            const.TC_KEY: 2.0,
+            const.PER_KEY: 5.0,
+            const.ECC_KEY: 0.0,
+            const.OMEGA_KEY: 0.0,
+            const.K_KEY: 4.0,
+            const.TRANSIT_FLAG: 0,
+        }
+    )
     # Add errors for sample test
     for k in const.ORB_KEYS + [const.TC_KEY]:
-        myplanet[k+"err1"] = myplanet[k] * 0.1 if myplanet[k] > 0.0 else 0.01
-        myplanet[k+"err2"] = myplanet[k] * 0.1 if myplanet[k] > 0.0 else 0.01
+        myplanet[k + "err1"] = myplanet[k] * 0.1 if myplanet[k] > 0.0 else 0.01
+        myplanet[k + "err2"] = myplanet[k] * 0.1 if myplanet[k] > 0.0 else 0.01
 
     return myplanet
 
 
 def test_tp_param(myplanet):
-
 
     # If both are there but non-transiting, should use TP
     myplanet[const.TRANSIT_FLAG] = 0
@@ -38,7 +40,10 @@ def test_tp_param(myplanet):
     myplanet[const.TRANSIT_FLAG] = 1
     tp = rmp.get_tp_param(myplanet)
     tp_from_tc = timetrans_to_timeperi(
-        myplanet[const.TC_KEY], myplanet[const.PER_KEY], myplanet[const.ECC_KEY], myplanet[const.OMEGA_KEY]
+        myplanet[const.TC_KEY],
+        myplanet[const.PER_KEY],
+        myplanet[const.ECC_KEY],
+        myplanet[const.OMEGA_KEY],
     )
     assert tp == tp_from_tc
 
@@ -73,14 +78,18 @@ def test_draw_bounds(myplanet):
 
     # Use large errors and make sure cropped at 0 (and 1 for ecc)
     my_planet_large_err = myplanet.copy()
-    my_planet_large_err[const.ECC_KEY+"err1"] = 1.0
-    my_planet_large_err[const.ECC_KEY+"err2"] = 1.0
-    my_planet_large_err[const.OMEGA_KEY+"err1"] = 10.0
-    my_planet_large_err[const.OMEGA_KEY+"err2"] = 10.0
-    my_planet_large_err[const.PER_KEY+"err1"] = my_planet_large_err[const.PER_KEY] * 10.0
-    my_planet_large_err[const.PER_KEY+"err2"] = my_planet_large_err[const.PER_KEY] * 10.0
-    my_planet_large_err[const.K_KEY+"err1"] = my_planet_large_err[const.K_KEY] * 10.0
-    my_planet_large_err[const.K_KEY+"err2"] = my_planet_large_err[const.K_KEY] * 10.0
+    my_planet_large_err[const.ECC_KEY + "err1"] = 1.0
+    my_planet_large_err[const.ECC_KEY + "err2"] = 1.0
+    my_planet_large_err[const.OMEGA_KEY + "err1"] = 10.0
+    my_planet_large_err[const.OMEGA_KEY + "err2"] = 10.0
+    my_planet_large_err[const.PER_KEY + "err1"] = (
+        my_planet_large_err[const.PER_KEY] * 10.0
+    )
+    my_planet_large_err[const.PER_KEY + "err2"] = (
+        my_planet_large_err[const.PER_KEY] * 10.0
+    )
+    my_planet_large_err[const.K_KEY + "err1"] = my_planet_large_err[const.K_KEY] * 10.0
+    my_planet_large_err[const.K_KEY + "err2"] = my_planet_large_err[const.K_KEY] * 10.0
 
     ecc_samples = rmp.draw_param(my_planet_large_err, const.ECC_KEY, ndraws=1000)
     assert np.all((ecc_samples > 0.0) & (ecc_samples < 1.0))
@@ -100,34 +109,37 @@ def test_draw_bounds(myplanet):
 def test_draw_errors(myplanet):
     mykey = "mykey"
     myplanet[mykey] = np.nan
-    myplanet[mykey+"err1"] = 1.0
-    myplanet[mykey+"err2"] = 1.0
+    myplanet[mykey + "err1"] = 1.0
+    myplanet[mykey + "err2"] = 1.0
 
-
-    with pytest.raises(ValueError, match=f"Value and error for {mykey} must not be NaN"):
+    with pytest.raises(
+        ValueError, match=f"Value and error for {mykey} must not be NaN"
+    ):
         rmp.draw_param(myplanet, mykey, ndraws=1000)
 
     myplanet[mykey] = 1.0
-    myplanet[mykey+"err1"] = np.nan
-    myplanet[mykey+"err2"] = np.nan
+    myplanet[mykey + "err1"] = np.nan
+    myplanet[mykey + "err2"] = np.nan
 
-    with pytest.raises(ValueError, match=f"Value and error for {mykey} must not be NaN"):
+    with pytest.raises(
+        ValueError, match=f"Value and error for {mykey} must not be NaN"
+    ):
         rmp.draw_param(myplanet, mykey, ndraws=1000)
-
 
     with pytest.raises(KeyError):
         rmp.draw_param(myplanet, "fdfjkad", ndraws=1000)
 
+
 def test_get_error(myplanet):
 
     mykey = "mykey"
-    myplanet[mykey+"err1"] = 1.0
-    myplanet[mykey+"err2"] = 2.0
+    myplanet[mykey + "err1"] = 1.0
+    myplanet[mykey + "err2"] = 2.0
 
     assert isinstance(rmp.get_param_error(myplanet, mykey), float)
     assert rmp.get_param_error(myplanet, mykey) == 1.5
 
-    myplanet[mykey+"err2"] = -2.0
+    myplanet[mykey + "err2"] = -2.0
     assert rmp.get_param_error(myplanet, mykey) == 1.5
 
 
@@ -147,14 +159,12 @@ def test_get_orbit_params(myplanet):
     assert (orbpars_samples.str.len() == 1000).all()
 
 
-
-
 def test_get_rv_signal(myplanet):
     t = np.linspace(
-            myplanet[const.TP_KEY],
-            myplanet[const.TP_KEY] + 5 * myplanet[const.PER_KEY],
-            num=1000,
-        )
+        myplanet[const.TP_KEY],
+        myplanet[const.TP_KEY] + 5 * myplanet[const.PER_KEY],
+        num=1000,
+    )
 
     # Single values return one RV curve
     params = rmp.get_orbit_params(myplanet)
@@ -175,9 +185,9 @@ def test_get_rv_signal(myplanet):
 
 def test_rv_from_samples(myplanet):
     t = np.linspace(
-            myplanet[const.TP_KEY],
-            myplanet[const.TP_KEY] + 5 * myplanet[const.PER_KEY],
-            num=1000,
+        myplanet[const.TP_KEY],
+        myplanet[const.TP_KEY] + 5 * myplanet[const.PER_KEY],
+        num=1000,
     )
     params = rmp.get_orbit_params(myplanet, n_samples=10_000)
     rv_samples = rmp.get_rv_signal(t, params, return_samples=True)

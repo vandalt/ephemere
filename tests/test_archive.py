@@ -1,13 +1,13 @@
 import warnings
+
+import pytest
+from astropy.utils.diff import report_diff_values
 from exofile.archive import ExoFile
-from exofile.exceptions import QueryFileWarning
 from exofile.table_custom import Table
 from pandas.core.frame import DataFrame
-from astropy.utils.diff import report_diff_values
-import pytest
 
 from ephemere.archive import get_archive_names, load_archive
-from ephemere.constants import OMEGA_KEY, CONTROV_FLAG
+from ephemere.constants import CONTROV_FLAG, OMEGA_KEY
 
 
 def test_archive_names():
@@ -45,9 +45,12 @@ def archive_tbl() -> Table:
 @pytest.fixture(scope="module")
 def xfile() -> Table:
     xfile = ExoFile.load(
-            query=True, param=None, use_alt_file=False, warn_units=False,
-            warn_local_file=False
-        )
+        query=True,
+        param=None,
+        use_alt_file=False,
+        warn_units=False,
+        warn_local_file=False,
+    )
     return xfile
 
 

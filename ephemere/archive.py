@@ -1,22 +1,23 @@
 from pathlib import Path
-from typing import Optional, Union, List
-from pandas.core.frame import DataFrame
+from typing import List, Optional, Union
 
 from exofile.archive import ExoFile
+from pandas.core.frame import DataFrame
 
 from ephemere import constants as const
 
+
 def load_archive(
-        query: bool = True,
-        exofile_param_file: Optional[Union[str, Path]] = None,
-        use_alt_exofile: bool = False,
-        keep_controv: bool = False,
-        warn_units: bool = False,
-        warn_local_file: bool = False,
-        convert_omega: bool = True,
-        return_pandas: bool = True,
-        **kwargs
-    ) -> DataFrame:
+    query: bool = True,
+    exofile_param_file: Optional[Union[str, Path]] = None,
+    use_alt_exofile: bool = False,
+    keep_controv: bool = False,
+    warn_units: bool = False,
+    warn_local_file: bool = False,
+    convert_omega: bool = True,
+    return_pandas: bool = True,
+    **kwargs
+) -> DataFrame:
 
     # TODO: Either merge the warn_units in exofile or use warning filters here instead
     # Masterfile PR: https://github.com/AntoineDarveau/exofile/pull/26
