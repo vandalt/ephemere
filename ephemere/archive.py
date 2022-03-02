@@ -45,7 +45,11 @@ def get_archive_names(names: List[str]):
 
     # GL/GJ stars are all "GJ " in NASA archive (and in exofile)
     def _replace_gj(oname):
-        gj_alts = ("GJ ", "GJ", "GL ", "GL", "Gl ", "Gl")
+        # Version with spaces before otherwise the space-free version will match
+        gj_alts = ["GJ", "GL", "Gl"]
+        gj_alts_with_space = [gja + " " for gja in gj_alts]
+        gj_alts = tuple(gj_alts_with_space + gj_alts)
+
         if oname.startswith(gj_alts):
             for gja in gj_alts:
                 if oname.startswith(gja):
