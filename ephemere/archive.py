@@ -41,11 +41,11 @@ def load_archive(
     return tbl.to_pandas() if return_pandas else tbl
 
 
-def get_archive_names(names: List[str]):
+def get_archive_names(names: List[str]) -> List[str]:
     new_objs = names.copy()
 
     # GL/GJ stars are all "GJ " in NASA archive (and in exofile)
-    def _replace_gj(oname):
+    def _replace_gj(oname: str):
         # Version with spaces before otherwise the space-free version will match
         gj_alts = ["GJ", "GL", "Gl"]
         gj_alts_with_space = [gja + " " for gja in gj_alts]
@@ -61,7 +61,7 @@ def get_archive_names(names: List[str]):
     new_objs = [_replace_gj(o) for o in new_objs]
 
     # Handle binary stars
-    def _format_binary(oname):
+    def _format_binary(oname: str):
         if oname.endswith((" A", " B")):
             return oname
         elif oname.endswith(("A", "B")):
