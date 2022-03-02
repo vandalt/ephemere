@@ -1,4 +1,5 @@
 # Keys from the archive
+NAME_KEY = "pl_name"
 PER_KEY = "pl_orbper"
 TP_KEY = "pl_orbtper"
 TC_KEY = "pl_tranmid"
