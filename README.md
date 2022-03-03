@@ -19,7 +19,8 @@ To install the latest release, use
 python -m pip install ephemere
 ```
 
-To install the development version, you can clone it from github an
+To install the development version, you can clone it from github and
+install it with the following commands:
 ```shell
 git clone https://github.com/vandalt/ephemere.git
 cd ephemere
